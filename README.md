@@ -27,14 +27,14 @@ Before you begin, ensure you have the following installed:
 Clone the repository and its `rtems_waf` submodule:
 
 ```shell
-$ git clone --recurse-submodules https://github.com/Clod/RTEMS-Hello-World.git
-$ cd RTEMS-Hello-World
+git clone --recurse-submodules https://github.com/Clod/RTEMS-Hello-World.git
+cd RTEMS-Hello-World
 ```
 
 If you cloned without `--recurse-submodules`, you can initialize the submodule separately:
 
 ```shell
-$ git submodule update --init
+git submodule update --init
 ```
 
 ### 2. Configure the Build
@@ -44,7 +44,7 @@ Run `waf configure` and point it to your RTEMS installation and the desired Boar
 The example below is for RTEMS 6.1 on the `nucleo-h743zi` board. **You must change these paths and BSP to match your setup.**
 
 ```shell
-$ ./waf configure --rtems=/opt/rtems/6.1 --rtems-bsp=arm/nucleo-h743zi
+./waf configure --rtems=/opt/rtems/6.1 --rtems-bsp=arm/nucleo-h743zi
 ```
 
 ### 3. Build the Application
@@ -52,7 +52,7 @@ $ ./waf configure --rtems=/opt/rtems/6.1 --rtems-bsp=arm/nucleo-h743zi
 Compile the project by running `waf`:
 
 ```shell
-$ ./waf
+./waf
 ```
 
 The executable will be created in the `build/` directory, inside a folder named after your toolchain and BSP. For the example above, it would be: `build/arm-rtems6-nucleo-h743zi/hello.exe`.
@@ -69,7 +69,7 @@ For example, if you are using a development environment where a host directory i
 # This is an example of copying the file to a shared volume.
 # The path /out/hello.elf is specific to a particular dev environment.
 # This should be automatically done by waf
-$ cp build/arm-rtems6-nucleo-h743zi/hello.exe /out/hello.elf
+cp build/arm-rtems6-nucleo-h743zi/hello.exe /out/hello.elf
 ```
 
 ### Monitoring Output
@@ -82,5 +82,5 @@ The serial device name will vary depending on your operating system and hardware
 
 ```shell
 # The device /dev/tty.usbmodem11303 may be different on your system.
-$ screen /dev/tty.usbmodem11303 115200
+screen /dev/tty.usbmodem11303 115200
 ```
