@@ -6,7 +6,7 @@ The application senses the blue user pushbutton on the target board and sends a 
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+Before you begin, ensure you have installed the [cFS-RTEMs](https://github.com/UTN-BA-Sats/cFS-RTEMs) docker image. **Otherwise**, you would need:
 
 1.  **RTEMS Toolchain and BSPs**: You need a working RTEMS development environment for your target architecture. For instructions, please see the RTEMS Documentation.
 2.  **Waf Build Tool**: Waf is a Python-based build system. You can download it from the official website but it should be already there.
@@ -61,15 +61,14 @@ The executable will be created in the `build/` directory, inside a folder named 
 
 ### Flashing the Board
 
-Copy the `hello.exe` executable to your board. The method for flashing depends on your specific hardware and debug probe (e.g., OpenOCD, J-Link, ST-Link).
+Now copy the `hello.exe` executable to your board. The method for flashing depends on your specific hardware and debug probe (e.g., OpenOCD, J-Link, ST-Link).
 
-For example, if you are using a development environment where a host directory is mounted (like a Docker container), you might copy it like this:
+The waf script should've copied the output binary to the `/home/utndev/rtems-out/` directory (if you are using our [cFS-RTEMs](https://github.com/UTN-BA-Sats/cFS-RTEMs) docker image).
+
+If thats not the case and if you are using a development environment where a host directory is mounted (like a Docker container), you might copy it like this:
 
 ```shell
-# This is an example of copying the file to a shared volume.
-# The path /out/hello.elf is specific to a particular dev environment.
-# This should be automatically done by waf
-cp build/arm-rtems6-nucleo-h743zi/hello.exe /out/hello.elf
+cp build/arm-rtems6-nucleo-h743zi/hello.exe /home/utndev/rtems-out/hello.elf
 ```
 
 ### Monitoring Output

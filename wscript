@@ -34,4 +34,4 @@ def build(bld):
     # Copy to an absolute path after the program is built
     bld(rule='cp ${SRC} ${TGT}',
         source='hello.exe',
-        target='/out/hello.elf')
+        target='/home/utndev/rtems-out/hello.elf')
