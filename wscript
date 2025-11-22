@@ -38,3 +38,8 @@ def build(bld):
         cflags=['-g', '-O2'],
         use=['RTEMS']
     )
+
+    # Copy to an absolute path after the program is built
+    bld(rule='cp ${SRC} ${TGT}',
+        source='hello.exe',
+        target='/out/hello.elf')
