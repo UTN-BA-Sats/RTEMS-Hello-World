@@ -8,7 +8,7 @@
 #define STATIC_IP      "192.168.0.55"
 #define NETMASK        "255.255.255.0"
 #define GATEWAY        "192.168.0.1"
-#define INTERFACE_NAME "st0"  /* Adjust based on your hardware */
+#define INTERFACE_NAME "stm0"  /* STM32H743ZI Ethernet interface */
 
 static void configure_network_static(void)
 {

@@ -11,7 +11,10 @@
 #include <errno.h>
 #include <rtems/version.h>
 
-/* Network includes */
+/* Network includes - only if enabled */
+#define ENABLE_NETWORK 1
+
+#if ENABLE_NETWORK
 #include <rtems/bsd/bsd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -19,6 +22,7 @@
 
 /* Include our network configuration */
 #include "network-config.h"
+#endif
 
 /* STM32H743 RCC */
 #define RCC_BASE        0x58024400
@@ -33,18 +37,22 @@
 
 #define BUTTON_PIN   13
 
-/* UDP Configuration */
+/* Network configuration - disable if causing issues */
 #define UDP_SERVER_IP   "192.168.0.104"
 #define UDP_SERVER_PORT 5000
 
+#if ENABLE_NETWORK
 static int udp_socket = -1;
 static struct sockaddr_in server_addr;
+#endif
 
 static void send_udp_message(const char *message)
 {
+#if ENABLE_NETWORK
   if (udp_socket < 0) return;
   sendto(udp_socket, message, strlen(message), 0,
          (struct sockaddr *)&server_addr, sizeof(server_addr));
+#endif
 }
 
 static void print_and_send(const char *message)
@@ -53,6 +61,7 @@ static void print_and_send(const char *message)
   send_udp_message(message);
 }
 
+#if ENABLE_NETWORK
 static int init_udp(void)
 {
   udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
@@ -76,6 +85,52 @@ static int init_udp(void)
   return 0;
 }
 
+/* Alternative lightweight network initialization for cases where full libbsd fails */
+static rtems_status_code init_libbsd_with_retry(void)
+{
+  rtems_status_code sc;
+  int retry_count = 0;
+  
+  printf("Attempting to initialize libbsd...\n");
+  printf("DEBUG: This requires RTEMS kernel built with --enable-posix --disable-networking\n");
+  
+  for (retry_count = 0; retry_count < 3; retry_count++) {
+    printf("DEBUG: Calling rtems_bsd_initialize() (attempt %d)...\n", retry_count + 1);
+    sc = rtems_bsd_initialize();
+    
+    if (sc == RTEMS_SUCCESSFUL) {
+      printf("libbsd initialized successfully on attempt %d\n", retry_count + 1);
+      return RTEMS_SUCCESSFUL;
+    }
+    
+    printf("libbsd initialization attempt %d failed (error %d: 0x%x)\n", 
+           retry_count + 1, sc, sc);
+    
+    if (retry_count < 2) {
+      printf("Retrying in 1 second...\n");
+      rtems_task_wake_after(RTEMS_MILLISECONDS_TO_TICKS(1000));
+    }
+  }
+  
+  printf("\n=== LIBBSD INITIALIZATION FAILED ===\n");
+  printf("Error code: %d (0x%x)\n", sc, sc);
+  printf("\nPossible causes (in order of likelihood):\n");
+  printf("  1. RTEMS kernel NOT built with --enable-posix (REQUIRED)\n");
+  printf("  2. RTEMS kernel built with --enable-networking (conflicts)\n");
+  printf("  3. Ethernet driver not available in this BSP build\n");
+  printf("  4. libbsd patches not applied to BSP\n");
+  printf("  5. Insufficient memory allocated for network stack\n");
+  printf("\nTo fix:\n");
+  printf("  • Rebuild RTEMS kernel with: --enable-posix --disable-networking\n");
+  printf("  • Verify BSP configuration includes STM32 Ethernet driver\n");
+  printf("  • See NETWORKING_SETUP.md for detailed instructions\n");
+  printf("  • Check RTEMS documentation for nucleo-h743zi libbsd support\n");
+  printf("\nWithout libbsd initialization, UDP functionality is unavailable\n\n");
+  
+  return sc;
+}
+#endif
+
 static void Init(rtems_task_argument arg)
 {
   int counter = 0;
@@ -88,22 +143,33 @@ static void Init(rtems_task_argument arg)
   printf("Board: STM32H743ZI Nucleo\n");
   printf("RTEMS Version: %s\n\n", rtems_version());
   
+#if ENABLE_NETWORK
   printf("Initializing network stack...\n");
-  sc = rtems_bsd_initialize();
+  sc = init_libbsd_with_retry();
   if (sc != RTEMS_SUCCESSFUL) {
     printf("ERROR: Failed to initialize libbsd: %d\n", sc);
     printf("Continuing without network...\n\n");
   } else {
-    printf("Network stack initialized\n");
+    printf("Network stack initialized successfully\n");
+    
+    /* Wait for network stack to be ready */
+    printf("Waiting for network stack to stabilize...\n");
+    rtems_task_wake_after(RTEMS_MILLISECONDS_TO_TICKS(2000));
+    
     /* Configure the network interface with our static IP */
     configure_network_static();
 
-    rtems_task_wake_after(RTEMS_MILLISECONDS_TO_TICKS(500));
+    rtems_task_wake_after(RTEMS_MILLISECONDS_TO_TICKS(1000));
     
     if (init_udp() == 0) {
       printf("UDP ready to %s:%d\n\n", UDP_SERVER_IP, UDP_SERVER_PORT);
+    } else {
+      printf("UDP initialization failed, continuing without UDP...\n\n");
     }
   }
+#else
+  printf("Network stack support disabled\n\n");
+#endif
   
   RCC_AHB4ENR |= RCC_AHB4ENR_GPIOCEN;
   GPIOC_MODER &= ~(0x3 << (BUTTON_PIN * 2));
@@ -147,16 +213,25 @@ static void Init(rtems_task_argument arg)
 #define CONFIGURE_INIT_TASK_STACK_SIZE (16 * 1024)
 #define CONFIGURE_MINIMUM_TASK_STACK_SIZE (2 * 1024)
 
+/* Request the standard network stack configuration symbols */
+#define RTEMS_BSD_CONFIG_INCLUDE_COMMON_SYMBOLS
+
+/* Allocate more mbufs for network operations - error 13 might indicate insufficient memory */
+#define RTEMS_BSD_CONFIG_DOMAIN_PAGE_MBUFS_SIZE (4 * 1024 * 1024)
+#define RTEMS_BSD_CONFIG_MBUFS 2000
+#define RTEMS_BSD_CONFIG_CLUSTERS 2000
+
+/* Include the BSP-specific network driver configuration */
+#define RTEMS_BSD_CONFIG_BSP_CONFIG
+
+/* Initialize the libbsd configuration */
+#define RTEMS_BSD_CONFIG_INIT
+
+#include <machine/rtems-bsd-config.h>
+
 #define CONFIGURE_RTEMS_INIT_TASKS_TABLE
 #define CONFIGURE_INIT_TASK_ENTRY_POINT Init
 #define CONFIGURE_INIT_TASK_NAME rtems_build_name('U', 'I', ' ', ' ')
 
 #define CONFIGURE_INIT
 #include <rtems/confdefs.h>
-
-/* Request the standard network stack configuration symbols */
-#define RTEMS_BSD_CONFIG_INCLUDE_COMMON_SYMBOLS
-
-/* Include the BSP-specific network driver configuration */
-#define RTEMS_BSD_CONFIG_BSP_CONFIG
-#include <machine/rtems-bsd-config.h>
