@@ -5,9 +5,9 @@
 #include <rtems/bsd/bsd.h>
 
 /* Network configuration - adjust these for your network */
-#define STATIC_IP      "192.168.1.50"
+#define STATIC_IP      "192.168.0.55"
 #define NETMASK        "255.255.255.0"
-#define GATEWAY        "192.168.1.1"
+#define GATEWAY        "192.168.0.1"
 #define INTERFACE_NAME "st0"  /* Adjust based on your hardware */
 
 static void configure_network_static(void)

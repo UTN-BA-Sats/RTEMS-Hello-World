@@ -17,6 +17,9 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+/* Include our network configuration */
+#include "network-config.h"
+
 /* STM32H743 RCC */
 #define RCC_BASE        0x58024400
 #define RCC_AHB4ENR     (*(volatile uint32_t *)(RCC_BASE + 0xE0))
@@ -31,7 +34,7 @@
 #define BUTTON_PIN   13
 
 /* UDP Configuration */
-#define UDP_SERVER_IP   "192.168.1.100"
+#define UDP_SERVER_IP   "192.168.0.104"
 #define UDP_SERVER_PORT 5000
 
 static int udp_socket = -1;
@@ -92,6 +95,9 @@ static void Init(rtems_task_argument arg)
     printf("Continuing without network...\n\n");
   } else {
     printf("Network stack initialized\n");
+    /* Configure the network interface with our static IP */
+    configure_network_static();
+
     rtems_task_wake_after(RTEMS_MILLISECONDS_TO_TICKS(500));
     
     if (init_udp() == 0) {
@@ -136,6 +142,7 @@ static void Init(rtems_task_argument arg)
 #define CONFIGURE_MAXIMUM_MESSAGE_QUEUES 8
 
 #define CONFIGURE_UNIFIED_WORK_AREAS
+#define CONFIGURE_UNIFIED_WORK_AREA_SIZE (256 * 1024)
 
 #define CONFIGURE_INIT_TASK_STACK_SIZE (16 * 1024)
 #define CONFIGURE_MINIMUM_TASK_STACK_SIZE (2 * 1024)
