@@ -154,5 +154,9 @@ static void Init(rtems_task_argument arg)
 #define CONFIGURE_INIT
 #include <rtems/confdefs.h>
 
+/* Request the standard network stack configuration symbols */
+#define RTEMS_BSD_CONFIG_INCLUDE_COMMON_SYMBOLS
+
+/* Include the BSP-specific network driver configuration */
 #define RTEMS_BSD_CONFIG_BSP_CONFIG
 #include <machine/rtems-bsd-config.h>
