@@ -90,12 +90,29 @@ static rtems_status_code init_libbsd_with_retry(void)
 {
   rtems_status_code sc;
   int retry_count = 0;
+  rtems_time_of_day tod;
   
   printf("Attempting to initialize libbsd...\n");
   printf("DEBUG: This requires RTEMS kernel built with --enable-posix --disable-networking\n");
+  printf("DEBUG: Checking clock system...\n");
+  fflush(stdout);
   
-  for (retry_count = 0; retry_count < 3; retry_count++) {
+  /* Check if clock is working */
+  sc = rtems_clock_get_tod(&tod);
+  if (sc != RTEMS_SUCCESSFUL) {
+    printf("WARNING: Clock system not ready (status=%d)\n", sc);
+  } else {
+    printf("DEBUG: Clock OK (%04d-%02d-%02d %02d:%02d:%02d)\n",
+           tod.year, tod.month, tod.day, tod.hour, tod.minute, tod.second);
+  }
+  
+  printf("DEBUG: Checking libbsd availability...\n");
+  fflush(stdout);
+  
+  for (retry_count = 0; retry_count < 5; retry_count++) {
     printf("DEBUG: Calling rtems_bsd_initialize() (attempt %d)...\n", retry_count + 1);
+    fflush(stdout);
+    
     sc = rtems_bsd_initialize();
     
     if (sc == RTEMS_SUCCESSFUL) {
@@ -103,29 +120,38 @@ static rtems_status_code init_libbsd_with_retry(void)
       return RTEMS_SUCCESSFUL;
     }
     
-    printf("libbsd initialization attempt %d failed (error %d: 0x%x)\n", 
+    printf("libbsd initialization attempt %d failed (status=%d: 0x%x)\n", 
            retry_count + 1, sc, sc);
+    fflush(stdout);
     
-    if (retry_count < 2) {
-      printf("Retrying in 1 second...\n");
-      rtems_task_wake_after(RTEMS_MILLISECONDS_TO_TICKS(1000));
+    if (retry_count < 4) {
+      printf("Retrying in 2 seconds...\n");
+      fflush(stdout);
+      rtems_task_wake_after(RTEMS_MILLISECONDS_TO_TICKS(2000));
     }
   }
   
   printf("\n=== LIBBSD INITIALIZATION FAILED ===\n");
-  printf("Error code: %d (0x%x)\n", sc, sc);
-  printf("\nPossible causes (in order of likelihood):\n");
-  printf("  1. RTEMS kernel NOT built with --enable-posix (REQUIRED)\n");
-  printf("  2. RTEMS kernel built with --enable-networking (conflicts)\n");
-  printf("  3. Ethernet driver not available in this BSP build\n");
-  printf("  4. libbsd patches not applied to BSP\n");
-  printf("  5. Insufficient memory allocated for network stack\n");
-  printf("\nTo fix:\n");
-  printf("  • Rebuild RTEMS kernel with: --enable-posix --disable-networking\n");
-  printf("  • Verify BSP configuration includes STM32 Ethernet driver\n");
-  printf("  • See NETWORKING_SETUP.md for detailed instructions\n");
-  printf("  • Check RTEMS documentation for nucleo-h743zi libbsd support\n");
-  printf("\nWithout libbsd initialization, UDP functionality is unavailable\n\n");
+  printf("Status code: %d (0x%x)\n", sc, sc);
+  printf("\nROOT CAUSE:\n");
+  printf("The RTEMS BSP was likely built WITHOUT explicit --enable-libbsd flag.\n");
+  printf("\nYour Docker build uses 'waf bspdefaults' which may not enable libbsd.\n");
+  printf("\nSOLUTION:\n");
+  printf("Rebuild RTEMS 6.1 with these exact flags:\n");
+  printf("  ./waf configure \\\n");
+  printf("    --prefix=/opt/rtems/6.1 \\\n");
+  printf("    --rtems-bsps=arm/nucleo-h743zi \\\n");
+  printf("    --rtems-tools=/opt/rtems/6.1 \\\n");
+  printf("    --enable-posix \\\n");
+  printf("    --disable-networking \\\n");
+  printf("    --enable-libbsd\n");
+  printf("\nOr update Docker build script with:\n");
+  printf("  RUN ./waf configure \\\n");
+  printf("    ... existing args ...\\\n");
+  printf("    --enable-libbsd\n");
+  printf("\nWithout libbsd, UDP networking is unavailable.\n");
+  printf("Button functionality will work normally.\n\n");
+  fflush(stdout);
   
   return sc;
 }
@@ -149,6 +175,12 @@ static void Init(rtems_task_argument arg)
   if (sc != RTEMS_SUCCESSFUL) {
     printf("ERROR: Failed to initialize libbsd: %d\n", sc);
     printf("Continuing without network...\n\n");
+    printf("RECOMMENDATION:\n");
+    printf("The error suggests the RTEMS BSP was not built with libbsd support.\n");
+    printf("Try rebuilding RTEMS 6 kernel with:\n");
+    printf("  ./configure --enable-posix --disable-networking \\\n");
+    printf("              --enable-rtemsbsp=arm/nucleo-h743zi\n");
+    printf("Or use a pre-built BSP known to include libbsd.\n\n");
   } else {
     printf("Network stack initialized successfully\n");
     
