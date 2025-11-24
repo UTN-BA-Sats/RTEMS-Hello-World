@@ -29,7 +29,9 @@ def build(bld):
     bld(features='c cprogram',
         target='hello.exe',
         cflags='-g -O2',
-        source=['hello.c', 'init.c'])
+        source=['hello.c', 'init.c'],
+        lib=['bsd', 'c', 'm'],
+        stlib='bsd')
     
     # Copy to an absolute path after the program is built
     bld(rule='cp ${SRC} ${TGT}',
