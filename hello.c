@@ -114,26 +114,23 @@ rtems_task Init(
     
     printf("[INIT] BSD stack should be ready now.\n\n");
 
-    /* 2. Configure network interface using ifconfig command */
-    printf("[NETWORK] Bringing up network interface stmac0 with DHCP...\n");
-    printf("[NETWORK] Executing: ifconfig stmac0 inet dhcp up\n");
+    /* 2. Configure network interface using static IP */
+    printf("[NETWORK] Bringing up network interface stmac0 with static IP...\n");
+    printf("[NETWORK] Executing: ifconfig stmac0 inet 192.168.0.200 netmask 255.255.255.0 up\n");
     char *ifconfig_argv[] = {
         "ifconfig",
         "stmac0",
         "inet",
-        "dhcp",
+        "192.168.0.200",
+        "netmask",
+        "255.255.255.0",
         "up",
         NULL
     };
-    int ifconfig_result = rtems_bsd_command_ifconfig(5, ifconfig_argv);
+    int ifconfig_result = rtems_bsd_command_ifconfig(7, ifconfig_argv);
     printf("[NETWORK] ifconfig returned: %d\n\n", ifconfig_result);
 
-    /* 3. Wait for DHCP to complete */
-    printf("[NETWORK] Waiting 10 seconds for DHCP address assignment...\n");
-    for (int i = 0; i < 10; i++) {
-        printf("[NETWORK] %ds...\n", 10 - i);
-        rtems_task_wake_after(RTEMS_MILLISECONDS_TO_TICKS(1000));
-    }
+    /* 3. No DHCP wait needed for static IP */
 
     /* 4. Print final network config (diagnostic) */
     printf("[NETWORK] Final network configuration:\n");
