@@ -29,16 +29,16 @@ def build(bld):
     bld(features='c cprogram',
         target='hello.exe',
         cflags='-g -O2',
-        source=['hello.c', 'init.c'],
-        # Force inclusion of specific BSD symbols and allow multiple definitions.
-        # This approach avoids pulling in the entire archive (which causes memory overflow)
-        # while still getting the symbols needed from libbsd.
-        linkflags=['-Wl,-u,rtems_bsd_initialize', 
-                   '-Wl,-u,_bsd_stmac_nexusmodule_sys_init',
-                   '-Wl,-u,rtems_bsd_command_ifconfig',
-                   '-Wl,-u,inet_aton',
-                   '-Wl,--allow-multiple-definition', 
-                   '-lbsd'],
+        source=['hello.c', 'init.c'], 
+        # The standard --whole-archive or --undefined flags cause linker
+        # conflicts and executable size overflows because libbsd.a contains
+        # multiple conflicting implementations (e.g. for crypto, other drivers).
+        #
+        # The definitive solution is to explicitly link ONLY the required driver
+        # object file from within the archive. The path is constructed from the
+        # BSP's libdir variable. This provides the 'if_stmac_attach' symbol
+        # without pulling in any other conflicting objects from the archive.
+        linkflags=[bld.env.LIBDIR[0] + '/libbsd.a(if_stmac.c.o)', '-lbsd'],
         lib=['c', 'm'])
     
     # Copy to an absolute path after the program is built
